@@ -74,12 +74,14 @@ def maxpool(prev_layer, k_h=1, k_w=1, d_h=1, d_w=1, name_scope='conv'):
 
 
 class SoundEncoder(object):
-    def __init__(self):
+    def __init__(self, sess):
+        self.sess = sess
         self.num_epoch = local_config['epoch']
         self.batch_size = local_config['batch_size']
         self.param_G = np.load(local_config['param_g_dir'], encoding='latin1').item()
         # Load checkpoint
         self._build_model()
+
         if self.load(local_config['checkpoint_dir']):
             print(" [*] Load SUCCESS")
         else:
@@ -162,69 +164,71 @@ class SoundEncoder(object):
         self.param_G.clear()
         return True
 
-    def _model(self):
+    def _model(self, name_scope = 'Soundnet'):
         print('-' * 5 + '  Sample model  ' + '-' * 5)
 
         print('intput layer: ' + str(self.X.get_shape()))
+        with tf.variable_scope(name_scope) as scope:
+            self.layers = {}
 
-        self.layers = {}
+            # Stream one: conv1 ~ conv7
+            self.layers[1] = conv2d(self.X, 1, 32, k_h=64, d_h=2, p_h=32, name_scope='conv1')
+            self.layers[2] = batch_norm(self.layers[1], 32, local_config['eps'], name_scope='conv1')
+            self.layers[3] = relu(self.layers[2], name_scope='conv1')
+            self.layers[4] = maxpool(self.layers[3], k_h=8, d_h=8, name_scope='conv1')
+            print('Conv1 {}'.format(self.layers[4].shape))
 
-        # Stream one: conv1 ~ conv7
-        self.layers[1] = conv2d(self.X, 1, 32, k_h=64, d_h=2, p_h=32, name_scope='conv1')
-        self.layers[2] = batch_norm(self.layers[1], 32, local_config['eps'], name_scope='conv1')
-        self.layers[3] = relu(self.layers[2], name_scope='conv1')
-        self.layers[4] = maxpool(self.layers[3], k_h=8, d_h=8, name_scope='conv1')
-        print('Conv1 {}'.format(self.layers[4].shape))
+            self.layers[5] = conv2d(self.layers[4], 32, 64, k_h=32, d_h=2, p_h=16, name_scope='conv2')
+            self.layers[6] = batch_norm(self.layers[5], 64, local_config['eps'], name_scope='conv2')
+            self.layers[7] = relu(self.layers[6], name_scope='conv2')
+            self.layers[8] = maxpool(self.layers[7], k_h=8, d_h=8, name_scope='conv2')
+            print('Conv2 {}'.format(self.layers[8].shape))
 
-        self.layers[5] = conv2d(self.layers[4], 32, 64, k_h=32, d_h=2, p_h=16, name_scope='conv2')
-        self.layers[6] = batch_norm(self.layers[5], 64, local_config['eps'], name_scope='conv2')
-        self.layers[7] = relu(self.layers[6], name_scope='conv2')
-        self.layers[8] = maxpool(self.layers[7], k_h=8, d_h=8, name_scope='conv2')
-        print('Conv2 {}'.format(self.layers[8].shape))
+            self.layers[9] = conv2d(self.layers[8], 64, 128, k_h=16, d_h=2, p_h=8, name_scope='conv3')
+            self.layers[10] = batch_norm(self.layers[9], 128, local_config['eps'], name_scope='conv3')
+            self.layers[11] = relu(self.layers[10], name_scope='conv3')
+            self.layers[12] = maxpool(self.layers[11], k_h=8, d_h=8, name_scope='conv3')
+            print('Conv3 {}'.format(self.layers[12].shape))
 
-        self.layers[9] = conv2d(self.layers[8], 64, 128, k_h=16, d_h=2, p_h=8, name_scope='conv3')
-        self.layers[10] = batch_norm(self.layers[9], 128, local_config['eps'], name_scope='conv3')
-        self.layers[11] = relu(self.layers[10], name_scope='conv3')
-        self.layers[12] = maxpool(self.layers[11], k_h=8, d_h=8, name_scope='conv3')
-        print('Conv3 {}'.format(self.layers[12].shape))
+            self.layers[13] = conv2d(self.layers[12], 128, 256, k_h=8, d_h=2, p_h=4, name_scope='conv4')
+            self.layers[14] = batch_norm(self.layers[13], 256, local_config['eps'], name_scope='conv4')
+            self.layers[15] = relu(self.layers[14], name_scope='conv4')
+            print('Conv3 {}'.format(self.layers[14].shape))
+            # Split one: conv8, conv8_2
+            # NOTE: here we use a padding of 2 to skip an unknown error
+            # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/common_shape_fns.cc#L45
+            # self.flat = tf.contrib.layers.flatten(self.layers[15])
+            # print('Flat final {}'.format(self.flat.shape))
+            self.layers[16] = conv2d(self.layers[15], 256, 1000, k_h=16, d_h=12, p_h=4, name_scope='conv5')
+            self.layers[17] = conv2d(self.layers[15], 256, 401, k_h=16, d_h=12, p_h=4, name_scope='conv5_2')
 
-        self.layers[13] = conv2d(self.layers[12], 128, 256, k_h=8, d_h=2, p_h=4, name_scope='conv4')
-        self.layers[14] = batch_norm(self.layers[13], 256, local_config['eps'], name_scope='conv4')
-        self.layers[15] = relu(self.layers[14], name_scope='conv4')
-        print('Conv3 {}'.format(self.layers[14].shape))
-        # Split one: conv8, conv8_2
-        # NOTE: here we use a padding of 2 to skip an unknown error
-        # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/common_shape_fns.cc#L45
-        # self.flat = tf.contrib.layers.flatten(self.layers[15])
-        # print('Flat final {}'.format(self.flat.shape))
-        self.layers[16] = conv2d(self.layers[15], 256, 1000, k_h=16, d_h=12, p_h=4, name_scope='conv5')
-        self.layers[17] = conv2d(self.layers[15], 256, 401, k_h=16, d_h=12, p_h=4, name_scope='conv5_2')
-        self.layers[18] = tf.contrib.layers.flatten(self.layers[15])
-        self.layers[19] = tf.layers.dense(self.layers[18],1024, activation=tf.nn.relu, name="fc1")
-        self.layers[20] = tf.layers.dense(self.layers[19], 128, activation=tf.nn.relu, name="fc2")
-        self.layers[21] = tf.layers.dense(self.layers[20], 10, None,name="fc3")
+            self.layers[18] = tf.contrib.layers.flatten(self.layers[16])
+            print('Conv4 {}'.format(self.layers[18]))
+            self.layers[19] = tf.layers.dense(self.layers[18],1024, activation=tf.nn.relu, name="fc1")
+            self.layers[20] = tf.layers.dense(self.layers[19], 128, activation=tf.nn.relu, name="fc2")
+            self.layers[21] = tf.layers.dense(self.layers[20], 10, None,name="fc3")
 
-        # self.layers[19] = self.FC(self.layers[18], self.layers[18].get_shape()[1], 1024)
-        # self.layers[20] = tf.nn.relu(self.layers[19])
-        # if self.is_train:
-        #     self.drop_out5 = tf.nn.dropout(self.layers[20], self.keep_prob_fc5)
-        # else:
-        #     self.drop_out5 = self.layers[20]
-        #
-        # self.layers[21] = self.FC(self.drop_out5, self.drop_out5.get_shape()[1], 128)
-        # self.layers[22] = tf.nn.relu(self.layers[21])
-        # if self.is_train:
-        #     self.drop_out6 = tf.nn.dropout(self.layers[22], self.keep_prob_fc6)
-        # else:
-        #     self.drop_out6 = self.layers[22]
-        #
-        # with tf.variable_scope('fc7'):
-        #
-        #     self.fc7 = self.FC(self.drop_out6, self.drop_out6.get_shape()[1], 10)
-        #     print('fc7 layer: ' + str(self.fc7.get_shape()))
-        #
-        # # Return the last layer
-        # return self.fc7
+            # self.layers[19] = self.FC(self.layers[18], self.layers[18].get_shape()[1], 1024)
+            # self.layers[20] = tf.nn.relu(self.layers[19])
+            # if self.is_train:
+            #     self.drop_out5 = tf.nn.dropout(self.layers[20], self.keep_prob_fc5)
+            # else:
+            #     self.drop_out5 = self.layers[20]
+            #
+            # self.layers[21] = self.FC(self.drop_out5, self.drop_out5.get_shape()[1], 128)
+            # self.layers[22] = tf.nn.relu(self.layers[21])
+            # if self.is_train:
+            #     self.drop_out6 = tf.nn.dropout(self.layers[22], self.keep_prob_fc6)
+            # else:
+            #     self.drop_out6 = self.layers[22]
+            #
+            # with tf.variable_scope('fc7'):
+            #
+            #     self.fc7 = self.FC(self.drop_out6, self.drop_out6.get_shape()[1], 10)
+            #     print('fc7 layer: ' + str(self.fc7.get_shape()))
+            #
+            # # Return the last layer
+            # return self.fc7
         return self.layers[21]
 
     def _input_ops(self):
@@ -267,7 +271,7 @@ class SoundEncoder(object):
         labels = tf.one_hot(self.Y, 10)
 
         # Build a model and get logits
-        logits = self._model()
+        logits = self._model(name_scope=local_config['name_scope'])
 
         # Compute loss
         self._loss(labels, logits)
@@ -360,7 +364,7 @@ def train_encoder():
     tf.reset_default_graph()
     sess = tf.Session()
     data = load_data()
-    model = SoundEncoder()
+    model = SoundEncoder(sess)
 
     model.train(sess, data['X_train'], data['Y_train'], data['X_val'], data['Y_val'])
     model.is_train = False
