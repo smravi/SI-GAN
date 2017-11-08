@@ -28,6 +28,10 @@ https://www.nvidia.com/en-us/data-center/gpu-accelerated-applications/tensorflow
 
 #!/bin/bash
 
+sudo add-apt-repository ppa:graphics-drivers/ppa 
+sudo apt update (re-run if any warning/error messages) 
+sudo apt-get install nvidia- (press tab to see latest). 375 (do not use 378, may cause login loops)
+
 # install CUDA Toolkit v8.0
 # instructions from https://developer.nvidia.com/cuda-downloads (linux -> x86_64 -> Ubuntu -> 16.04 -> deb (network))
 CUDA_REPO_PKG="cuda-repo-ubuntu1604_8.0.61-1_amd64.deb"
