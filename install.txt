@@ -22,3 +22,6 @@ then, build and install:
 
 python setup.py build
 python setup.py install
+
+# Setting up CUDA
+https://www.nvidia.com/en-us/data-center/gpu-accelerated-applications/tensorflow/
