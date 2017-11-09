@@ -1,29 +1,3 @@
-Sound Preprocessing Installation
-
-sudo apt-get install libsamplerate0 libsamplerate0-dev
-This python package will probably be the most tricky to install. If you are lucky, you can just
-
-pip install scikits.samplerate
-On my Ubuntu 12.04, this results in an error because the SRC library path is not found. The reason is that the setup searches SRC in /usr/lib and not in /usr/lib/x86_64-linux-gnu where the library is actually present. To install, you need to download the archive from pypi and edit some configuration file:
-
-wget https://pypi.python.org/packages/source/s/scikits.samplerate/scikits.samplerate-0.3.3.tar.gz#md5=96c8d8ba3aa95a9db15994f78792efb4
-tar -xvf scikits.samplerate-0.3.3.tar.gz
-cd scikits.samplerate-0.3.3
-then edit the site.cfg example file and insert the following lines:
-
-[samplerate]
-library_dirs=/usr/lib/x86_64-linux-gnu
-include_dirs=/usr/include
-To know where the SRC library is on you machine:
-
-sudo dpkg -L libsamplerate0
-sudo dpkg -L libsamplerate0-dev
-then, build and install:
-
-python setup.py build
-python setup.py install
-
-
 # Set up Python environment
 sudo apt-get install python3-pip python3-dev python-virtualenv
 
