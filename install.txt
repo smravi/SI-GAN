@@ -23,6 +23,16 @@ then, build and install:
 python setup.py build
 python setup.py install
 
+
+# Set up Python environment
+sudo apt-get install python3-pip python3-dev python-virtualenv
+
+# Clean Previous CUDA installation
+sudo apt autoremove cuda
+sudo apt-get --purge remove cuda
+sudo apt-get clean
+removing cuda-9/cuda stuff from /etc/apt/sources.list.d/cuda-9-0-local.list
+
 # Setting up CUDA
 https://www.nvidia.com/en-us/data-center/gpu-accelerated-applications/tensorflow/
 
@@ -51,3 +61,24 @@ sudo chmod a+r /usr/local/cuda-8.0/lib64/libcudnn*
 # set environment variables
 export PATH=/usr/local/cuda-8.0/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64\${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+
+#Tensorflow installtion
+sudo apt-get install libcupti-dev
+pip install tensorflow-gpu
+
+#Run the simple program
+import tensorflow as tf
+hello = tf.constant('Hello, TensorFlow!')
+sess = tf.Session()
+print(sess.run(hello))
+
+#PIP3 packages required
+pip3 install librosa
+pip3 install sklearn
+pip3 install pandas
+pip3 install scipy
+pip3 install matplotlib
+pip3 install jupyter
+
+
