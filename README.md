@@ -1,4 +1,3 @@
 # SI-GAN
-## Setting up Soundnet
-- pip install numba
-- pip install librosa(If it doesn't install, install directly from github)
+Model Files required
+[Data and Models]https://drive.google.com/drive/folders/1mxJsW2TT3WnDADW2zqtTFMPwVd3NlSoU
