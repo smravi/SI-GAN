@@ -37,6 +37,8 @@ sudo chmod a+r /usr/local/cuda-8.0/lib64/libcudnn*
 export PATH=/usr/local/cuda-8.0/bin${PATH:+:${PATH}}
 export LD_LIBRARY_PATH=/usr/local/cuda-8.0/lib64\${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
+# Create the virtaul env
+virtualenv denv -p python3
 
 #Tensorflow installtion
 sudo apt-get install libcupti-dev
@@ -55,5 +57,5 @@ pip3 install pandas
 pip3 install scipy
 pip3 install matplotlib
 pip3 install jupyter
-
+pip install scikit image
 
