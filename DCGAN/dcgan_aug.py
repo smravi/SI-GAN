@@ -145,7 +145,6 @@ class DCGAN:
         lr_decay = 0.5      
         decay_every = 100
         beta1 = 0.5
-        feature_loss_weight = 0.5
 
 
         # Checkpoint Creation
@@ -184,31 +183,25 @@ class DCGAN:
                     is_train=False, reuse=True, batch_size=self.batch_size)
 
         # Set up discriminator
-        net_d, disc_fake_image_logits, net_feature_f = discriminator_sound2img(
-            net_fake_image.outputs, net_snn, is_train=True, reuse=False)
+        net_d, disc_fake_image_logits = discriminator_sound2img(
+                            net_fake_image.outputs, net_snn, is_train=True, reuse=False)
 
-        _, disc_real_image_logits, net_feature_r = discriminator_sound2img(
-            t_real_image, net_snn, is_train=True, reuse=True)
-
+        _, disc_real_image_logits = discriminator_sound2img(
+                            t_real_image, net_snn, is_train=True, reuse=True)
+            
         w_snn = self.sound_encoder2.layers[layer]
-        _, disc_mismatch_logits, _ = discriminator_sound2img(
-            t_real_image,
-            w_snn,
-            is_train=True, reuse=True)
+        _, disc_mismatch_logits = discriminator_sound2img(
+                            t_real_image,
+                            w_snn,
+                            is_train=True, reuse=True)
 
+        
         # Set up losses
         d_loss1 = tl.cost.sigmoid_cross_entropy(disc_real_image_logits, tf.ones_like(disc_real_image_logits), name='d1')
-        d_loss2 = tl.cost.sigmoid_cross_entropy(disc_mismatch_logits, tf.zeros_like(disc_mismatch_logits), name='d2')
-        d_loss3 = tl.cost.sigmoid_cross_entropy(disc_fake_image_logits, tf.zeros_like(disc_fake_image_logits),
-                                                name='d3')
+        d_loss2 = tl.cost.sigmoid_cross_entropy(disc_mismatch_logits,  tf.zeros_like(disc_mismatch_logits), name='d2')
+        d_loss3 = tl.cost.sigmoid_cross_entropy(disc_fake_image_logits, tf.zeros_like(disc_fake_image_logits), name='d3')
         d_loss = d_loss1 + (d_loss2 + d_loss3) * 0.5
-
-        d_feature_loss = tf.reduce_mean(tf.nn.l2_loss(net_feature_f.outputs - net_feature_r.outputs, name='lf'))
-
-        g_loss_logit = tl.cost.sigmoid_cross_entropy(disc_fake_image_logits, tf.ones_like(disc_fake_image_logits),
-                                                     name='g')
-
-        g_loss = g_loss_logit + feature_loss_weight * d_feature_loss
+        g_loss = tl.cost.sigmoid_cross_entropy(disc_fake_image_logits, tf.ones_like(disc_fake_image_logits), name='g')
 
 
         # Get Variables for back propogation
@@ -284,12 +277,9 @@ class DCGAN:
 
                     print("Checkpoint")
                     ## updates G
-                    errG, _, gloss_sum_string = self.sess.run([g_loss, g_optim, gloss_sum], 
-                            feed_dict={
-                                        t_real_image: b_real_images,
-                                        self.sound_encoder1.sound_input_placeholder: real_sound,
-                                        t_z: b_z
-                                        })
+                    errG, _, gloss_sum_string = self.sess.run([g_loss, g_optim, gloss_sum], feed_dict={
+                                    self.sound_encoder1.sound_input_placeholder : real_sound,
+                                    t_z : b_z})
 
                     #Run Summary data
                     # summary_str = self.sess.run([gan_sum])
@@ -327,7 +317,7 @@ class DCGAN:
                     model_path = self.saver.save(self.sess, save_dir+"/sigan"+str(epoch)+".ckpt")
         except KeyboardInterrupt:
             print("Ending Training...")     
-            model_path = self.saver.save(self.sess, save_dir+"/sigan"+".ckpt")  
+            model_path = self.saver.save(self.sess, save_dir+"/sigan"+".ckpt")
 
 def main():
     dg1 = DCGAN()

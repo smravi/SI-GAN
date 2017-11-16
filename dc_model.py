@@ -1129,11 +1129,12 @@ def discriminator_txt2img_resnet(input_images, t_txt=None, is_train=True, reuse=
                     is_train=is_train, gamma_init=gamma_init, name='d_h3/batch_norm_2')
 
         net_ho = Conv2d(net_h4, 1, (s16, s16), (s16, s16), padding='VALID', W_init=w_init, name='d_ho/conv2d')
+        net_ho_feat = Conv2d(net_h4, 1, (s16, s16), (s16, s16), padding='VALID', W_init=w_init, name='d_ho/conv2d')
         # 1 x 1 x 1
         # net_ho = FlattenLayer(net_h4, name='d_ho/flatten')
         logits = net_ho.outputs
         net_ho.outputs = tf.nn.sigmoid(net_ho.outputs)
-    return net_ho, logits
+    return net_ho, logits, net_ho_feat
 
 def z_encoder(input_images, is_train=True, reuse=False):
     """ 64x64 -> z """
