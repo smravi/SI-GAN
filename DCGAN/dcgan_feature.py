@@ -46,9 +46,9 @@ class DCGAN:
         self.Model()
 
         #For saving checkpoints
-        self.saver = tf.train.Saver(keep_checkpoint_every_n_hours=1, 
-                                    max_to_keep=5, 
-                                    restore_sequentially=True)
+       # self.saver = tf.train.Saver(keep_checkpoint_every_n_hours=1, 
+                            #        max_to_keep=5, 
+                            #        restore_sequentially=True)
 
     def Model(self):
         self.sound_config['name_scope'] = 'Soundnet1'
@@ -106,10 +106,10 @@ class DCGAN:
 
         path = checkpoint_dir+"/sigan"+".ckpt"
         if(os.path.exists(checkpoint_dir+"/sigan"+".ckpt")):
-            try:
-                self.saver.restore(self.sess, checkpoint_dir+"/sigan"+".ckpt")
-                return True;
-            except:
+           try:
+           	self.saver.restore(self.sess, checkpoint_dir+"/sigan"+".ckpt")
+           	return True;
+           except:
                 return False
         # ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
         # if ckpt and ckpt.model_checkpoint_path:
@@ -145,7 +145,7 @@ class DCGAN:
         lr_decay = 0.5      
         decay_every = 100
         beta1 = 0.5
-        feature_loss_weight = 0.5
+        feature_loss_weight = 0.2
 
 
         # Checkpoint Creation
@@ -203,7 +203,7 @@ class DCGAN:
                                                 name='d3')
         d_loss = d_loss1 + (d_loss2 + d_loss3) * 0.5
 
-        d_feature_loss = tf.reduce_mean(tf.nn.l2_loss(net_feature_f.outputs - net_feature_r.outputs, name='lf'))
+        d_feature_loss = tf.reduce_mean(tf.nn.l2_loss(net_feature_f.outputs - net_feature_r.outputs, name='lf'))/tf.cast(tf.size(net_feature_f.outputs), dtype=tf.float32)
 
         g_loss_logit = tl.cost.sigmoid_cross_entropy(disc_fake_image_logits, tf.ones_like(disc_fake_image_logits),
                                                      name='g')
@@ -226,7 +226,10 @@ class DCGAN:
 
         # Initialize Variables
         tl.layers.initialize_global_variables(self.sess)
-
+        
+        
+        self.saver = tf.train.Saver(keep_checkpoint_every_n_hours=1,max_to_keep=5, 
+                                    restore_sequentially=True) 
         #Load checkpoint
         if self.load_from_ckpt(save_dir):
             print(" [*] Load SUCCESS")
@@ -266,7 +269,7 @@ class DCGAN:
 
                     real_sound, real_images = self.get_batch(real = True)
                     wrong_sound, wrong_images = self.get_batch(real = False)
-                    test_sound, test_images = self.get_batch(real = True)
+                    
 
                     ## get noise
                     b_z = np.random.normal(loc=0.0, scale=1.0, size=(self.batch_size, z_dim)).astype(np.float32)
@@ -300,16 +303,18 @@ class DCGAN:
                     print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4fs, d_loss: %.4f, g_loss: %.4f" \
                                 % (epoch, n_epoch, step, n_batch_epoch, time.time() - step_time, errD, errG))
                     
+                    if(counter%100 == 0):
+                        test_sound, test_images = self.get_batch(real = True)
 
-                ni = int(np.ceil(np.sqrt(self.batch_size)))
+                        ni = int(np.ceil(np.sqrt(self.batch_size)))
 
-                img_gen, snn_out = self.sess.run([net_g.outputs, net_snn], feed_dict={
-                                                        self.sound_encoder1.sound_input_placeholder: test_sound,
-                                                        t_z : sample_seed})
-                print("End of Run")
-                save_images(img_gen, [ni, ni], 'samples/step1_gan-cls/train_{:02d}.png'.format(epoch))
-                
-                save_images(test_images, [ni, ni], 'samples/real/train_{:02d}.png'.format(epoch))
+                        img_gen, snn_out = self.sess.run([net_g.outputs, net_snn], feed_dict={
+                                                                self.sound_encoder1.sound_input_placeholder: test_sound,
+                                                                t_z : sample_seed})
+                        print("End of Run")
+                        save_images(img_gen, [ni, ni], 'samples/step1_gan-cls/train_{:02d}.png'.format(counter))
+                        
+                        save_images(test_images, [ni, ni], 'samples/real/train_{:02d}.png'.format(counter))
                     
                 ## save model
                 if (epoch != 0) and (epoch % 5) == 0:
