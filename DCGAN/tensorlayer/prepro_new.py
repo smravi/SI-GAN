@@ -1531,7 +1531,7 @@ def crop_central_whiten_images(images=None, height=24, width=24):
 def load_audio(audio_path,load_size):
     data,sampling_rate  = librosa.load(audio_path,duration=3)
     #data = librosa.util.fix_length(data,66150)
-    #print(data.shape,sampling_rate)
+    print(data.shape,sampling_rate)
     data = np.clip(data,-1,1)
     preprocessed_audio = preprocess(data,load_size).reshape(-1,1,1)
     return preprocessed_audio
@@ -1550,7 +1550,7 @@ def load_sounds_from_list(name_list,load_size):
     for idx, audio_path in enumerate(name_list):
         #print(audio_path,"******")
         sound_sample= load_audio(audio_path,load_size)
-        #print(sound_sample.shape)
+        print(sound_sample.shape)
         audios[idx] =sound_sample
     return audios
 
@@ -1570,7 +1570,7 @@ def preprocess(raw_audio, load_size):
 
     # Make range [-256, 256]
     raw_audio *= 256.0
-    #print("Into Preprocess",raw_audio.shape)
+    print("Into Preprocess",raw_audio.shape)
     # Make minimum length available
     length = load_size
     if length > raw_audio.shape[0]:
