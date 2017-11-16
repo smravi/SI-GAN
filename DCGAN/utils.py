@@ -134,6 +134,21 @@ def combine_and_save_image_sets(image_sets, directory):
 
         scipy.misc.imsave( os.path.join( directory,  'combined_{}.jpg'.format(i) ), combined_image)
 
+def add_to_regularization_and_summary(var):
+    if var is not None:
+        tf.summary.histogram(var.op.name, var)
+        tf.add_to_collection("reg_loss", tf.nn.l2_loss(var))
+
+
+def add_activation_summary(var):
+    tf.summary.histogram(var.op.name + "/activation", var)
+    tf.scalar_summary(var.op.name + "/sparsity", tf.nn.zero_fraction(var))
+
+
+def add_gradient_summary(grad, var):
+    if grad is not None:
+        tf.summary.histogram(var.op.name + "/gradient", grad)
+
 
 
 
