@@ -27,7 +27,7 @@ class DCGAN:
         #self.config         = config
         self.param_G        = np.load('./models/sound5.npy', encoding='latin1').item()
         self.sound_config ={
-            'batch_size': 1,
+            'batch_size': 30,
             'train_size': np.inf,
             'epoch': 5,
             'eps': 1e-5,
@@ -233,11 +233,11 @@ class DCGAN:
                 wrong_images = load_images_from_list([train_audio_paths_mismatch[id1] for id1 in idx_w],self.sound_config['load_size'])
                 wrong_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_w],self.sound_config['load_size'])
                 print(real_sound.shape,wrong_sound.shape,real_images.shape,wrong_images.shape)
-                np.save("real_sound_batch.npy",real_sound)
-                np.save("wrong_sound_batch.npy",wrong_sound)
-                np.save("real_image_batch.npy",real_images)
-                np.save("wrong_images_batch.npy",wrong_images)
-                sys.exit()                
+#                 np.save("real_sound_batch.npy",real_sound)
+#                 np.save("wrong_sound_batch.npy",wrong_sound)
+#                 np.save("real_image_batch.npy",real_images)
+#                 np.save("wrong_images_batch.npy",wrong_images)
+#                 sys.exit()                
 		#sound_sample = load_from_list(train_audio_paths_correct[idx*batch_size:(idx+1)*batch_size], self.sound_config)
                 #image_sample = load_from_list(train_image_paths_correct[idx*batch_size:(idx+1)*batch_size], self.sound_config)
                 #image_sample_mismatch =  load_from_list(train_audio_paths_mismatch[idx*batch_size:(idx+1)*batch_size], self.sound_config)
