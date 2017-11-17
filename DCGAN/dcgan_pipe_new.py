@@ -26,9 +26,9 @@ class DCGAN:
         #self.config         = config
         self.param_G        = np.load('./models/sound5.npy', encoding='latin1').item()
         self.sound_config ={
-            'batch_size': 1,
+            'batch_size': 30,
             'train_size': np.inf,
-            'epoch': 5,
+            'epoch': 1,
             'eps': 1e-5,
             'learning_rate': 1e-3,
             'beta1': 0.9,
@@ -121,9 +121,9 @@ class DCGAN:
 
         # Placeholders
         t_real_image = tf.placeholder('float32', [batch_size, image_size, image_size, 3], name = 'real_image')
-        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[None,None,1,1], name='real_sound_input')
+        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[batch_size,330750,1,1], name='real_sound_input')
         t_wrong_image = tf.placeholder('float32', [batch_size ,image_size, image_size, 3], name = 'wrong_image')
-        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[None, None,1,1], name='wrong_sound_input')
+        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[batch_size, 330750,1,1], name='wrong_sound_input')
         t_z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
 
 
@@ -201,7 +201,7 @@ class DCGAN:
 
         gan_sum = tf.summary.merge([dloss1_sum, dloss2_sum, dloss3_sum, dloss_sum])
         tboard_writer = tf.summary.FileWriter("./logs", self.sess.graph)
-        train_audio_paths_correct,train_image_paths_correct,train_audio_paths_mismatch,train_labels = read_text_file('./Correct_Image_Sound_Pair.txt')
+        train_audio_paths_correct,train_image_paths_correct,train_image_paths_mismatch,train_labels = read_text_file('./Correct_Image_Sound_Pair.txt')
         counter = 0
         n_images_train = len(train_audio_paths_correct) #image_train.shape[0]*image_train.shape[1]
         n_batch_epoch = int(n_images_train / batch_size)
@@ -223,20 +223,22 @@ class DCGAN:
             for step in range(n_batch_epoch):
                 step_time = time.time()
                 idx_r = get_random_int(min = 0 , max = len(train_audio_paths_correct)-1,number = batch_size)
-                print(idx_r)
-                print(len(train_audio_paths_correct))
+                #print(idx_r)
+                #print(len(train_audio_paths_correct))
                 real_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_r],self.sound_config['load_size'])
                 real_images = load_images_from_list([train_image_paths_correct[id1] for id1 in idx_r],self.sound_config['load_size'])
                 
                 idx_w = get_random_int(min = 0 , max = len(train_audio_paths_correct)-1,number = batch_size)
-                wrong_images = load_images_from_list([train_audio_paths_mismatch[id1] for id1 in idx_w],self.sound_config['load_size'])
+                wrong_images = load_images_from_list([train_image_paths_mismatch[id1] for id1 in idx_w],self.sound_config['load_size'])
                 wrong_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_w],self.sound_config['load_size'])
-                print(real_sound.shape,wrong_sound.shape,real_images.shape,wrong_images.shape)
-                np.save("real_sound_batch.npy",real_sound)
-                np.save("wrong_sound_batch.npy",wrong_sound)
-                np.save("real_image_batch.npy",real_images)
-                np.save("wrong_images_batch.npy",wrong_images)
-                sys.exit()                
+                idx_t =  get_random_int(min = 0 , max = len(train_audio_paths_correct)-1,number = batch_size)
+                test_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_t],self.sound_config['load_size'])
+                test_images = load_images_from_list([train_image_paths_correct[id1] for id1 in idx_t],self.sound_config['load_size'])
+                print(real_sound.shape,wrong_sound.shape,real_images.shape,wrong_images.shape,test_sound.shape)
+                #np.save("real_sound_batch.npy",real_sound)
+                #np.save("wrong_sound_batch.npy",wrong_sound
+                #np.save("real_image_batch.npy",real_images)
+                #np.save("wrong_images_batch.npy",wrong_images)
 		#sound_sample = load_from_list(train_audio_paths_correct[idx*batch_size:(idx+1)*batch_size], self.sound_config)
                 #image_sample = load_from_list(train_image_paths_correct[idx*batch_size:(idx+1)*batch_size], self.sound_config)
                 #image_sample_mismatch =  load_from_list(train_audio_paths_mismatch[idx*batch_size:(idx+1)*batch_size], self.sound_config)
@@ -293,7 +295,6 @@ class DCGAN:
                 #                             self.sound_encoder2.sound_input_placeholder: wrong_sound,
                 #                             self.sound_encoder1.sound_input_placeholder: real_sound,
                 #                             t_z : b_z})
-
                 errD, _, gan_sum_string = \
                             self.sess.run([d_loss, d_optim, gan_sum], 
                                 feed_dict={
