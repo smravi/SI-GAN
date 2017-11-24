@@ -177,7 +177,7 @@ class WGAN:
         # n_batch_epoch = 3
         n_epoch = 50
         print_freq = 1
-        z_dim = 128
+        z_dim = 256
         sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(self.batch_size, z_dim)).astype(np.float32)
         alpha = 0.2
         image_size = 64
@@ -185,13 +185,10 @@ class WGAN:
         lr = 0.0002
         lr_decay = 0.5      
         decay_every = 500000
-        max_iterations = 1e5
-        learning_rate = 2e-4
+        max_iterations = 50000 #1e5
         optimizer_param = 0.5 #beta1 = 0.5
         ni = int(np.ceil(np.sqrt(self.batch_size)))
         #Critic
-        critic_iterations = 3
-        clip_values = (-0.01, 0.01)
         optimizer = "RMSProp"
 
         feat_weight = 0.2
@@ -277,8 +274,6 @@ class WGAN:
         g_vars = tl.layers.get_variables_with_name('generator', True, True)
 
 
-        clip_discriminator_var_op = [var.assign(tf.clip_by_value(var, clip_values[0], clip_values[1])) for
-                                         var in d_vars]
         # Learning Rate
         with tf.variable_scope('learning_rate'):
             lr_v = tf.Variable(lr, trainable=False)
@@ -364,20 +359,14 @@ class WGAN:
 
             #if(step<200):
             # Discriminator optimize
-          
-            if step < 10 or step % 500 == 0:
-                critic_itrs = 10
-            else:
-                critic_itrs = critic_iterations
 
-            for critic_itr in range(critic_itrs):
-                self.sess.run([d_optim], 
+            self.sess.run([d_optim], 
                                 feed_dict={
                                             t_real_image : b_real_images,
                                             t_wrong_sound: wrong_sound,
                                             t_real_sound: real_sound,
                                             t_z : b_z})
-                self.sess.run(clip_discriminator_var_op)
+
            # if d_loss_val>0.5:
             self.sess.run([g_optim], feed_dict={
                                 t_real_image : b_real_images,
@@ -387,7 +376,7 @@ class WGAN:
             
             # Loss Visualization
             counter += 1
-            if(step!=0 and step % 20==0):
+            if(step!=0 and step % 100==0):
                 g_loss_val, d_loss_val, gan_sum_string = self.sess.run([g_loss, d_loss, gan_sum],feed_dict={
                                         t_real_image : b_real_images,
                                         t_wrong_sound: wrong_sound,

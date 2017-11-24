@@ -57,7 +57,7 @@ class WGAN:
         datapath = './data/'
         # self.sound_train = np.load(datapath+'esc_44_sound.npy')
         # self.image_train = np.load(datapath+'esc_44_image.npy')
-        self.sound_train = np.load(datapath+'cust_esc_10_sound128.npy')
+        self.sound_train = np.load(datapath+'cust_esc_10_sound.npy')
         self.image_train = np.load(datapath+'cust_esc_10_images.npy')
         self.key_labels = np.load(datapath+'cust_esc_10_keys.npy')
     
