@@ -57,9 +57,9 @@ class WGAN:
         datapath = './data/'
         # self.sound_train = np.load(datapath+'esc_44_sound.npy')
         # self.image_train = np.load(datapath+'esc_44_image.npy')
-        self.sound_train = np.load(datapath+'cust_esc_10_sound.npy')
-        self.image_train = np.load(datapath+'cust_esc_10_images.npy')
-        self.key_labels = np.load(datapath+'cust_esc_10_keys.npy')
+        self.sound_train = np.load(datapath+'final_esc_10_sound.npy')
+        self.image_train = np.load(datapath+'final_esc_10_images.npy')
+        self.key_labels = np.load(datapath+'final_esc_10_keys.npy')
     
     def aug_samples(self):
         n_samples=40
@@ -75,13 +75,34 @@ class WGAN:
             for clip in range(n_samples):
                 for img in range(n_samples):
                     rlist = []
-                    for i in range(10) :
+                    for i in range(self.n_classes) :
                         if i!=cat:
                             rlist.append(i)
                     cat_ = random.choice(rlist)
                     mis_map.append((cat, clip, cat_,img))
         mis_map = np.array(mis_map)
         return real_map, mis_map
+
+    def normal_samples(self):
+        n_samples=40
+        real_map = []
+        for cat in range(self.n_classes):
+            for i in range(n_samples):
+                real_map.append((cat, i, i))
+        real_map = np.array(real_map)
+
+        mis_map = []
+        for cat in range(self.n_classes):
+            for clip_img_index in range(n_samples):
+                rlist = []
+                for i in range(10) :
+                    if i!=cat:
+                        rlist.append(i)
+                cat_ = random.choice(rlist)
+                mis_map.append((cat, clip_img_index, cat_,clip_img_index))
+        mis_map = np.array(mis_map)
+        return real_map, mis_map
+    
 
     def get_batch(self, real=True):
         if real:
@@ -146,7 +167,11 @@ class WGAN:
         # Loading data from numpy file
         self.load_data()
         # Multiplexing data
-        self.real_map, self.mis_map = self.aug_samples()
+        # self.real_map, self.mis_map = self.aug_samples()
+
+        #Normal Samples
+        self.real_map, self.mis_map = self.normal_samples()
+
 
         n_batch_epoch = int(self.real_map.shape[0] / self.batch_size)
         # n_batch_epoch = 3
@@ -160,7 +185,7 @@ class WGAN:
         lr = 0.0002
         lr_decay = 0.5      
         decay_every = 500000
-        max_iterations = 20000 #1e5
+        max_iterations = 10000 #1e5
         learning_rate = 2e-4
         optimizer_param = 0.5 #beta1 = 0.5
         ni = int(np.ceil(np.sqrt(self.batch_size)))
@@ -270,12 +295,13 @@ class WGAN:
             add_to_regularization_and_summary(var=v)
 
         self.saver = tf.train.Saver(keep_checkpoint_every_n_hours=1, max_to_keep=5,restore_sequentially=True)
-        self.saver.restore(self.sess, "bkup_models/sigan.ckpt")
+        # self.saver.restore(self.sess, "bkup_models/sigan.ckpt")
         #Load checkpoint
         # if self.load_from_ckpt(save_dir):
         #    print(" [*] Load SUCCESS")
         # else:
         #    print(" [!] Load failed...")
+
         #Set up tensorboard summary
         dloss1_sum = tf.summary.scalar("Real Loss", d_loss1)
         dloss2_sum = tf.summary.scalar("Mismatch Loss", d_loss2)
@@ -370,6 +396,7 @@ class WGAN:
                 save_images(self.test_images, [ni, ni], 'samples/real/train_{:02d}.png'.format(step))
 
             
+            print('Step End')
             if(step!=0 and (step % 500)==0):
                 model_path = self.saver.save(self.sess, save_dir+"/sigan"+str(step)+".ckpt")
 
@@ -385,7 +412,7 @@ class WGAN:
             #     tl.files.save_npz(net_g.all_params, name='net_g_name'+str(epoch), sess=self.sess)
             #     tl.files.save_npz(net_d.all_params, name='net_d_name'+str(epoch), sess=self.sess) 
 
-        model_path = self.saver.save(self.sess, 'final_model'+"/sigan"+".ckpt")
+        model_path = self.saver.save(self.sess, save_dir+"/sigan"+".ckpt")
 
 def main():
     dg1 = WGAN()

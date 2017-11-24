@@ -57,7 +57,7 @@ class WGAN:
         datapath = './data/'
         # self.sound_train = np.load(datapath+'esc_44_sound.npy')
         # self.image_train = np.load(datapath+'esc_44_image.npy')
-        self.sound_train = np.load(datapath+'cust_esc_10_sound128.npy')
+        self.sound_train = np.load(datapath+'cust_esc_10_sound.npy')
         self.image_train = np.load(datapath+'cust_esc_10_images.npy')
         self.key_labels = np.load(datapath+'cust_esc_10_keys.npy')
     
@@ -177,7 +177,7 @@ class WGAN:
         # n_batch_epoch = 3
         n_epoch = 50
         print_freq = 1
-        z_dim = 128
+        z_dim = 101
         sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(self.batch_size, z_dim)).astype(np.float32)
         alpha = 0.2
         image_size = 64
@@ -185,8 +185,7 @@ class WGAN:
         lr = 0.0005
         lr_decay = 0.5      
         decay_every = 500000
-        max_iterations = 20000 #1e5
-        learning_rate = 2e-4
+        max_iterations = 50000 #1e5
         optimizer_param = 0.5 #beta1 = 0.5
         ni = int(np.ceil(np.sqrt(self.batch_size)))
         #Set up optimizer
@@ -202,9 +201,9 @@ class WGAN:
 
         # Placeholders
         t_real_image = tf.placeholder('float32', [None, image_size, image_size, 3], name = 'real_image')
-        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[None,128], name='real_sound_input')
+        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[None,27], name='real_sound_input')
         t_wrong_image = tf.placeholder('float32', [None ,image_size, image_size, 3], name = 'wrong_image')
-        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[None, 128], name='wrong_sound_input')
+        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[None, 27], name='wrong_sound_input')
         t_z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
         t_z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
 

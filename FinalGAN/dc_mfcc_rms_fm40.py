@@ -57,7 +57,7 @@ class WGAN:
         datapath = './data/'
         # self.sound_train = np.load(datapath+'esc_44_sound.npy')
         # self.image_train = np.load(datapath+'esc_44_image.npy')
-        self.sound_train = np.load(datapath+'cust_esc_10_sound128.npy')
+        self.sound_train = np.load(datapath+'cust_esc_10_sound.npy')
         self.image_train = np.load(datapath+'cust_esc_10_images.npy')
         self.key_labels = np.load(datapath+'cust_esc_10_keys.npy')
     
@@ -177,24 +177,20 @@ class WGAN:
         # n_batch_epoch = 3
         n_epoch = 50
         print_freq = 1
-        z_dim = 128
+        z_dim = 101
         sample_seed = np.random.normal(loc=0.0, scale=1.0, size=(self.batch_size, z_dim)).astype(np.float32)
         alpha = 0.2
         image_size = 64
         layer = 18
         lr = 0.0005
         lr_decay = 0.5      
-        decay_every = 10000000 #500000
-        max_iterations = 100000
-        learning_rate = 2e-4
+        decay_every = 500000
+        max_iterations = 50000 #1e5
         optimizer_param = 0.5 #beta1 = 0.5
         ni = int(np.ceil(np.sqrt(self.batch_size)))
-        #Critic
-        critic_iterations = 3
-        clip_values = (-0.01, 0.01)
+        #Set up optimizer
         optimizer = "RMSProp"
-        feat_weight = 0.3
-
+        feat_weight = 0.4
         # Checkpoint Creation
         tl.files.exists_or_mkdir("samples/step1_gan-cls")
         tl.files.exists_or_mkdir("samples/real")
@@ -205,9 +201,9 @@ class WGAN:
 
         # Placeholders
         t_real_image = tf.placeholder('float32', [None, image_size, image_size, 3], name = 'real_image')
-        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[None,128], name='real_sound_input')
+        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[None,27], name='real_sound_input')
         t_wrong_image = tf.placeholder('float32', [None ,image_size, image_size, 3], name = 'wrong_image')
-        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[None, 128], name='wrong_sound_input')
+        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[None, 27], name='wrong_sound_input')
         t_z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
         t_z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
 
@@ -275,9 +271,6 @@ class WGAN:
         d_vars = tl.layers.get_variables_with_name('discriminator', True, True)
         g_vars = tl.layers.get_variables_with_name('generator', True, True)
 
-        # Weight Clipping
-        clip_discriminator_var_op = [var.assign(tf.clip_by_value(var, clip_values[0], clip_values[1])) for
-                                         var in d_vars]
 
         # Learning Rate
         with tf.variable_scope('learning_rate'):
@@ -365,19 +358,13 @@ class WGAN:
             #if(step<200):
             # Discriminator optimize
           
-            if step < 10 or step % 500 == 0:
-                critic_itrs = 10
-            else:
-                critic_itrs = critic_iterations
-
-            for critic_itr in range(critic_itrs):
-                self.sess.run([d_optim], 
+            if g_loss_val<0.5 or d_loss_val>0.5:
+               self.sess.run([d_optim], 
                                 feed_dict={
                                             t_real_image : b_real_images,
                                             t_wrong_sound: wrong_sound,
                                             t_real_sound: real_sound,
                                             t_z : b_z})
-                self.sess.run(clip_discriminator_var_op)
            # if d_loss_val>0.5:
             self.sess.run([g_optim], feed_dict={
                                 t_real_image : b_real_images,
@@ -387,7 +374,7 @@ class WGAN:
             
             # Loss Visualization
             counter += 1
-            if(step!=0 and step % 100==0):
+            if(step!=0 and step % 20==0):
                 g_loss_val, d_loss_val, gan_sum_string = self.sess.run([g_loss, d_loss, gan_sum],feed_dict={
                                         t_real_image : b_real_images,
                                         t_wrong_sound: wrong_sound,
