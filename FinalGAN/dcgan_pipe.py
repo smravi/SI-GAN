@@ -7,7 +7,7 @@ from tensorlayer.cost import *
 import numpy as np
 import scipy
 from scipy.io import loadmat
-import time, os, re,sys
+import time, os, re
 
 from utils import *
 from dc_model import *
@@ -26,13 +26,13 @@ class DCGAN:
         #self.config         = config
         self.param_G        = np.load('./models/sound5.npy', encoding='latin1').item()
         self.sound_config ={
-            'batch_size': 30,
+            'batch_size': 1,
             'train_size': np.inf,
-            'epoch': 1,
+            'epoch': 5,
             'eps': 1e-5,
             'learning_rate': 1e-3,
             'beta1': 0.9,
-            'load_size': 66150*5,
+            'load_size': 22050*4,
             'sample_rate': 22050,
             'name_scope': 'SoundNet',
             'phase': 'train',
@@ -58,8 +58,8 @@ class DCGAN:
 
     def load_data(self):
         datapath = './data/'
-        #sound_train = np.load(datapath+'esc_44_sound.npy')
-        ##image_train = np.load(datapath+'esc_44_image.npy')
+        sound_train = np.load(datapath+'esc_44_sound.npy')
+        image_train = np.load(datapath+'esc_44_image.npy')
         return sound_train, image_train
 
 
@@ -69,34 +69,26 @@ class DCGAN:
 
         # checkpoint_dir = os.path.join(checkpoint_dir, self.get_model_dir)
 
-        path = checkpoint_dir+"/sigan"+".ckpt"
-        if(os.path.exists(checkpoint_dir+"/sigan"+".ckpt")):
-            try:
-                self.saver.restore(self.sess, checkpoint_dir+"/sigan"+".ckpt")
-                return True;
-            except:
-                return False
-        # ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
-        # if ckpt and ckpt.model_checkpoint_path:
-        #     ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
-        #     self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
-        #     print(" [*] Success to read {}".format(ckpt_name))
-        #     self.counter = int(ckpt_name.rsplit('-', 1)[-1])
-        #     print(" [*] Start counter from {}".format(self.counter))
-        #     return True
-        # else:
-        #     print(" [*] Failed to find a checkpoint under {}".format(checkpoint_dir))
-        #     return False
+        ckpt = tf.train.get_checkpoint_state(checkpoint_dir)
+        if ckpt and ckpt.model_checkpoint_path:
+            ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
+            self.saver.restore(self.sess, os.path.join(checkpoint_dir, ckpt_name))
+            print(" [*] Success to read {}".format(ckpt_name))
+            self.counter = int(ckpt_name.rsplit('-', 1)[-1])
+            print(" [*] Start counter from {}".format(self.counter))
+            return True
+        else:
+            print(" [*] Failed to find a checkpoint under {}".format(checkpoint_dir))
+            return False
 
     def dc_run(self):
-        #sound_train, image_train = self.load_data()
-        n_classes = 5
+        sound_train, image_train = self.load_data()
+        n_classes = 44
         batch_size = 30
-#        n_images_train = image_train.shape[0]*image_train.shape[1]
-#        n_batch_epoch = int(n_images_train / batch_size)
-        # n_batch_epoch = 3
-        train_size = -np.inf
-        n_epoch = 100
+        n_images_train = image_train.shape[0]*image_train.shape[1]
+        # n_batch_epoch = int(n_images_train / batch_size)
+        n_batch_epoch = 3
+        n_epoch = 2
         print_freq = 1
         sample_size = batch_size
         z_dim = 512
@@ -112,8 +104,6 @@ class DCGAN:
 
         # Checkpoint Creation
         tl.files.exists_or_mkdir("samples/step1_gan-cls")
-        tl.files.exists_or_mkdir("samples/real")
-        tl.files.exists_or_mkdir("samples/step1_gan-cls")
         tl.files.exists_or_mkdir("samples/step_pretrain_encoder")
         tl.files.exists_or_mkdir("checkpoint")
         save_dir = "checkpoint"
@@ -121,9 +111,9 @@ class DCGAN:
 
         # Placeholders
         t_real_image = tf.placeholder('float32', [batch_size, image_size, image_size, 3], name = 'real_image')
-        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[batch_size,330750,1,1], name='real_sound_input')
+        t_real_sound = tf.placeholder(dtype=tf.float32, shape=[None,220500,1,1], name='real_sound_input')
         t_wrong_image = tf.placeholder('float32', [batch_size ,image_size, image_size, 3], name = 'wrong_image')
-        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[batch_size, 330750,1,1], name='wrong_sound_input')
+        t_wrong_sound = tf.placeholder(dtype=tf.float32, shape=[None, 220500,1,1], name='wrong_sound_input')
         t_z = tf.placeholder(tf.float32, [None, z_dim], name='z_noise')
 
 
@@ -201,12 +191,8 @@ class DCGAN:
 
         gan_sum = tf.summary.merge([dloss1_sum, dloss2_sum, dloss3_sum, dloss_sum])
         tboard_writer = tf.summary.FileWriter("./logs", self.sess.graph)
-        train_audio_paths_correct,train_image_paths_correct,train_image_paths_mismatch,train_labels = read_text_file('./Correct_Image_Sound_Pair.txt')
+
         counter = 0
-        n_images_train = len(train_audio_paths_correct) #image_train.shape[0]*image_train.shape[1]
-        n_batch_epoch = int(n_images_train / batch_size)
-        #data_size = len(train_audio_paths_correct)
-        #batch_idxs = min(data_size,train_size)//batch_size
         for epoch in range(0, n_epoch+1):
             start_time = time.time()
 
@@ -222,64 +208,38 @@ class DCGAN:
 
             for step in range(n_batch_epoch):
                 step_time = time.time()
-                idx_r = get_random_int(min = 0 , max = len(train_audio_paths_correct)-1,number = batch_size)
-                #print(idx_r)
-                #print(len(train_audio_paths_correct))
-                real_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_r],self.sound_config['load_size'])
-                real_images = load_images_from_list([train_image_paths_correct[id1] for id1 in idx_r],self.sound_config['load_size'])
-                
-                idx_w = get_random_int(min = 0 , max = len(train_audio_paths_correct)-1,number = batch_size)
-                wrong_images = load_images_from_list([train_image_paths_mismatch[id1] for id1 in idx_w],self.sound_config['load_size'])
-                wrong_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_w],self.sound_config['load_size'])
-                idx_t =  get_random_int(min = 0 , max = len(train_audio_paths_correct)-1,number = batch_size)
-                test_sound = load_sounds_from_list([train_audio_paths_correct[id1] for id1 in idx_t],self.sound_config['load_size'])
-                test_images = load_images_from_list([train_image_paths_correct[id1] for id1 in idx_t],self.sound_config['load_size'])
-                print(real_sound.shape,wrong_sound.shape,real_images.shape,wrong_images.shape,test_sound.shape)
-                #np.save("real_sound_batch.npy",real_sound)
-                #np.save("wrong_sound_batch.npy",wrong_sound
-                #np.save("real_image_batch.npy",real_images)
-                #np.save("wrong_images_batch.npy",wrong_images)
-		#sound_sample = load_from_list(train_audio_paths_correct[idx*batch_size:(idx+1)*batch_size], self.sound_config)
-                #image_sample = load_from_list(train_image_paths_correct[idx*batch_size:(idx+1)*batch_size], self.sound_config)
-                #image_sample_mismatch =  load_from_list(train_audio_paths_mismatch[idx*batch_size:(idx+1)*batch_size], self.sound_config)
-                #labels = load_from_list(train_labels[idx*batch_size:(idx+1)*batch_size], self.sound_config)
                 counter +=1
+                ind = random.sample(range(n_classes), int(n_classes/2))
+                ind_ = np.setdiff1d(np.arange(n_classes),ind)
+
+                idexs_w = get_random_int(min=0, max=image_train.shape[1]*len(ind)-1, number=batch_size)
+
+                mis_sound = sound_train[ind].reshape(-1,sound_train.shape[2],sound_train.shape[3],sound_train.shape[4])
+                mis_image = image_train[ind_].reshape(-1,image_train.shape[2],image_train.shape[3],image_train.shape[4])
+                print(mis_sound.shape,mis_image.shape,idexs_w)
+                wrong_sound = mis_sound[idexs_w]
+                wrong_images = mis_image[idexs_w]
+
                 
-                 
-#                ind = random.sample(range(n_classes), int(n_classes/2))
-#                ind_ = np.setdiff1d(np.arange(n_classes),ind)
-#
-#                idexs_w = get_random_int(min=0, max=image_train.shape[1]*len(ind)-1, number=batch_size)
-
-#                mis_sound = sound_train[ind].reshape(-1,sound_train.shape[2],sound_train.shape[3],sound_train.shape[4])
-#                mis_image = image_train[ind_].reshape(-1,image_train.shape[2],image_train.shape[3],image_train.shape[4])
-#                print(mis_sound.shape,mis_image.shape,idexs_w)
-#                wrong_sound = mis_sound[idexs_w]
-#                wrong_images = mis_image[idexs_w]
-
-#                real_sound = sound_sample.reshape(-1,sound_sample.shape[2],sound_sample[3],sound_sample[4])
-#                real_images = image_sample.reshape(-1,image_sample.shape[2],image_sample[3],image_sample[4])
-#                wrong_images = image_sample_mismatch.reshape(-1,image_sample_mismatch.shape[2],image_sample_mismatch[3],image_sample_mismatch[4])
-                               
                 # Today
-#                del(mis_sound)
-#                del(mis_image)
-#                sound_train_flat = sound_train.reshape(-1,sound_train.shape[2],sound_train.shape[3],sound_train.shape[4])
-#                image_train_flat = image_train.reshape(-1,image_train.shape[2],image_train.shape[3],image_train.shape[4])
+                del(mis_sound)
+                del(mis_image)
+                sound_train_flat = sound_train.reshape(-1,sound_train.shape[2],sound_train.shape[3],sound_train.shape[4])
+                image_train_flat = image_train.reshape(-1,image_train.shape[2],image_train.shape[3],image_train.shape[4])
                 #########################################################
                 
-#                idexs_r = get_random_int(min=0, max=image_train.shape[1]*image_train.shape[0]-1, number=batch_size)
+                idexs_r = get_random_int(min=0, max=image_train.shape[1]*image_train.shape[0]-1, number=batch_size)
 
-#                real_images = image_train_flat[idexs_r]
-#                real_sound = sound_train_flat[idexs_r]
+                real_images = image_train_flat[idexs_r]
+                real_sound = sound_train_flat[idexs_r]
 
                 # Test sample
-#                idexs_t = get_random_int(min=0, max=image_train.shape[1]*image_train.shape[0]-1, number=30)
-#                test_sound = sound_train_flat[idexs_t]
-#                test_images = image_train_flat[idexs_t]
+                idexs_t = get_random_int(min=0, max=image_train.shape[1]*image_train.shape[0]-1, number=30)
+                test_sound = sound_train_flat[idexs_t]
+                test_images = image_train_flat[idexs_t]
 
-#                del(sound_train_flat)
-#                del(image_train_flat)
+                del(sound_train_flat)
+                del(image_train_flat)
                 
                 #del sound_train,image_train,image_train_flat,sound_train_flat
                 ## get noise
@@ -295,6 +255,7 @@ class DCGAN:
                 #                             self.sound_encoder2.sound_input_placeholder: wrong_sound,
                 #                             self.sound_encoder1.sound_input_placeholder: real_sound,
                 #                             t_z : b_z})
+
                 errD, _, gan_sum_string = \
                             self.sess.run([d_loss, d_optim, gan_sum], 
                                 feed_dict={
@@ -318,7 +279,7 @@ class DCGAN:
                 print("Epoch: [%2d/%2d] [%4d/%4d] time: %4.4fs, d_loss: %.4f, g_loss: %.4f" \
                             % (epoch, n_epoch, step, n_batch_epoch, time.time() - step_time, errD, errG))
                 
-
+                model_path = self.saver.save(self.sess, save_dir+"/sigan"+".ckpt")
             ni = int(np.ceil(np.sqrt(batch_size)))
 
             img_gen, snn_out = self.sess.run([net_g.outputs, net_snn], feed_dict={
